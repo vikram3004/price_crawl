@@ -60,9 +60,11 @@ opening issues — handy for testing selectors.
   you find out when a site changes its layout, instead of silently missing a deal.
 
 ## Cadence
-`cron: "0 */6 * * *"` = every 6 hours. Don't go below hourly: Actions
-scheduled runs are best-effort and get queued under load anyway, and hammering
-a retailer is what gets your IP blocked.
+`cron: "0 18 * * *"` = once daily at 18:00 UTC (1:00 PM EST / 2:00 PM EDT).
+GitHub cron is fixed-UTC and doesn't follow daylight saving, so the local
+clock time shifts an hour between winter and summer. Don't go below hourly:
+Actions scheduled runs are best-effort and get queued under load anyway, and
+hammering a retailer is what gets your IP blocked.
 
 ## Caveats
 - **Amazon / Flipkart / Walmart** actively block datacenter IPs (which is what

@@ -2,7 +2,7 @@ name: price-check
 
 on:
   schedule:
-    - cron: "0 */6 * * *"   # every 6 hours UTC
+    - cron: "0 18 * * *"   # daily at 18:00 UTC = 1:00 PM EST (2:00 PM EDT — cron is fixed-UTC, no DST)
   workflow_dispatch:         # manual "Run workflow" button
 
 permissions:
