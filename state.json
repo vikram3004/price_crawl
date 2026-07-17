@@ -1,6 +1,8 @@
 {
   "nest-hub-2nd-gen": {
-    "last_error": "selector \"[jsname='price'], [aria-label*='$'], .price\" matched nothing and no JSON-LD offer found",
-    "checked_at": "2026-07-17T03:23:14.105558+00:00"
+    "price": 99.99,
+    "notified": false,
+    "checked_at": "2026-07-17T03:29:41.998783+00:00",
+    "last_error": null
   }
 }
