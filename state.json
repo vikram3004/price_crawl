@@ -1,10 +1,1 @@
-{
-  "sony-wh1000xm5": {
-    "last_error": "HTTPSConnectionPool(host='www.bestbuy.com', port=443): Read timed out. (read timeout=25)",
-    "checked_at": "2026-07-17T03:17:56.341688+00:00"
-  },
-  "example-js-site": {
-    "last_error": "selector \"[data-testid='price']\" matched nothing and no JSON-LD offer found",
-    "checked_at": "2026-07-17T03:17:57.569079+00:00"
-  }
-}
+{}
