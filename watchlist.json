@@ -3,7 +3,7 @@
     "id": "nest-hub-2nd-gen",
     "name": "Google Nest Hub (2nd Gen)",
     "url": "https://store.google.com/product/nest_hub_2nd_gen?hl=en-US",
-    "selector": "[jsname='price'], [aria-label*='$'], .price",
+    "selector": "[data-test='price']",
     "target": 50.0,
     "currency": "USD",
     "render_js": true
