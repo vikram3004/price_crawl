@@ -1,19 +1,10 @@
 [
   {
-    "id": "sony-wh1000xm5",
-    "name": "Sony WH-1000XM5 Headphones",
-    "url": "https://www.bestbuy.com/site/sony-wh1000xm5/6505727.p",
-    "selector": ".priceView-hero-price span[aria-hidden='true']",
-    "target": 299.99,
-    "currency": "USD",
-    "render_js": false
-  },
-  {
-    "id": "example-js-site",
-    "name": "Example JS-rendered product",
-    "url": "https://example.com/product/123",
-    "selector": "[data-testid='price']",
-    "target": 49.0,
+    "id": "nest-hub-2nd-gen",
+    "name": "Google Nest Hub (2nd Gen)",
+    "url": "https://store.google.com/product/nest_hub_2nd_gen?hl=en-US",
+    "selector": "[jsname='price'], [aria-label*='$'], .price",
+    "target": 50.0,
     "currency": "USD",
     "render_js": true
   }
