@@ -1,0 +1,20 @@
+[
+  {
+    "id": "sony-wh1000xm5",
+    "name": "Sony WH-1000XM5 Headphones",
+    "url": "https://www.bestbuy.com/site/sony-wh1000xm5/6505727.p",
+    "selector": ".priceView-hero-price span[aria-hidden='true']",
+    "target": 299.99,
+    "currency": "USD",
+    "render_js": false
+  },
+  {
+    "id": "example-js-site",
+    "name": "Example JS-rendered product",
+    "url": "https://example.com/product/123",
+    "selector": "[data-testid='price']",
+    "target": 49.0,
+    "currency": "USD",
+    "render_js": true
+  }
+]
