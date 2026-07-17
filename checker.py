@@ -20,9 +20,6 @@ WATCHLIST = ROOT / "watchlist.json"
 STATE = ROOT / "state.json"
 HISTORY = ROOT / "history.csv"
 
-TG_TOKEN = os.environ.get("TG_TOKEN")
-TG_CHAT = os.environ.get("TG_CHAT")
-
 UA_POOL = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
@@ -96,20 +93,121 @@ def extract_price(html: str, selector: str) -> float:
     raise LookupError(f"selector {selector!r} matched nothing and no JSON-LD offer found")
 
 
-# ---------- alerting ----------
+# ---------- alerting (via GitHub Issues) ----------
 
-def send(text: str):
-    if not (TG_TOKEN and TG_CHAT):
-        print(f"[no telegram creds] {text}")
+GH_TOKEN = os.environ.get("GITHUB_TOKEN")
+GH_REPO = os.environ.get("GITHUB_REPOSITORY")            # "owner/repo", set by Actions
+GH_API = os.environ.get("GITHUB_API_URL", "https://api.github.com")
+
+ALERT_LABEL = "price-alert"
+ERROR_LABEL = "scraper-error"
+
+
+def _gh(method: str, path: str, **kwargs):
+    """Call the GitHub REST API for the current repo. Returns parsed JSON (or {})."""
+    resp = requests.request(
+        method,
+        f"{GH_API}/repos/{GH_REPO}{path}",
+        headers={
+            "Authorization": f"Bearer {GH_TOKEN}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+        timeout=20,
+        **kwargs,
+    )
+    resp.raise_for_status()
+    return resp.json() if resp.content else {}
+
+
+def _configured() -> bool:
+    return bool(GH_TOKEN and GH_REPO)
+
+
+def _find_open_issue(marker: str, label: str):
+    """Return the open issue whose body carries `marker`, or None."""
+    issues = _gh("GET", f"/issues?state=open&labels={label}&per_page=100")
+    for issue in issues:
+        if "pull_request" in issue:      # the issues endpoint also lists PRs
+            continue
+        if marker in (issue.get("body") or ""):
+            return issue
+    return None
+
+
+def open_or_update_alert(item: dict, price: float):
+    """First target hit → open an issue; still/further below → comment on it."""
+    marker = f"<!-- pw-item:{item['id']} -->"
+    cur = item.get("currency", "USD")
+    now = datetime.now(timezone.utc).isoformat()
+    line = f"{cur} {price:.2f} (target {cur} {item['target']:.2f})"
+
+    if not _configured():
+        print(f"[no github token] PRICE HIT {item['name']}: {line}")
         return
-    try:
-        requests.post(
-            f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage",
-            json={"chat_id": TG_CHAT, "text": text, "disable_web_page_preview": False},
-            timeout=15,
-        ).raise_for_status()
-    except Exception as e:
-        print(f"alert failed: {e}", file=sys.stderr)
+
+    existing = _find_open_issue(marker, ALERT_LABEL)
+    if existing:
+        _gh("POST", f"/issues/{existing['number']}/comments",
+            json={"body": f"🎯 Still at/below target: **{line}** — {now}"})
+    else:
+        body = (
+            f"**{item['name']}** hit your target price.\n\n"
+            f"- **Now:** {cur} {price:.2f}\n"
+            f"- **Target:** {cur} {item['target']:.2f}\n"
+            f"- **URL:** {item['url']}\n"
+            f"- **Checked:** {now}\n\n"
+            f"_Opened automatically by price-watcher. "
+            f"It closes itself when the price goes back above target._\n\n"
+            f"{marker}"
+        )
+        _gh("POST", "/issues",
+            json={"title": f"🎯 Price hit: {item['name']} — {cur} {price:.2f}",
+                  "body": body, "labels": [ALERT_LABEL]})
+
+
+def resolve_alert(item: dict, price: float):
+    """Price back above target → comment on and close the open alert issue, if any."""
+    marker = f"<!-- pw-item:{item['id']} -->"
+    cur = item.get("currency", "USD")
+    now = datetime.now(timezone.utc).isoformat()
+
+    if not _configured():
+        print(f"[no github token] BACK ABOVE TARGET {item['name']}: {cur} {price:.2f}")
+        return
+
+    existing = _find_open_issue(marker, ALERT_LABEL)
+    if existing:
+        _gh("POST", f"/issues/{existing['number']}/comments",
+            json={"body": f"↩️ Back above target: now {cur} {price:.2f} — {now}. Closing."})
+        _gh("PATCH", f"/issues/{existing['number']}", json={"state": "closed"})
+
+
+def report_failures(failures: list):
+    """Scraper problems → open, or append to, a single rolling error issue."""
+    marker = "<!-- pw-errors -->"
+    now = datetime.now(timezone.utc).isoformat()
+    listing = "\n".join(f"- {f}" for f in failures)
+
+    if not _configured():
+        print(f"[no github token] SCRAPER PROBLEMS:\n{listing}")
+        return
+
+    existing = _find_open_issue(marker, ERROR_LABEL)
+    if existing:
+        _gh("POST", f"/issues/{existing['number']}/comments",
+            json={"body": f"⚠️ {now}\n{listing}"})
+    else:
+        body = (
+            "price-watcher hit scraping problems — usually a site changed its "
+            "layout and a selector needs updating.\n\n"
+            f"**{now}**\n{listing}\n\n"
+            "_Close this issue once the selectors are fixed; a new one opens "
+            f"if problems recur._\n\n{marker}"
+        )
+        _gh("POST", "/issues",
+            json={"title": "⚠️ price-watcher: scraper problems",
+                  "body": body, "labels": [ERROR_LABEL]})
 
 
 # ---------- state ----------
@@ -155,14 +253,9 @@ def main():
         should_alert = hit and (not was_notified or (last_price and price < last_price))
 
         if should_alert:
-            cur = item.get("currency", "USD")
-            send(
-                f"🎯 PRICE HIT\n{item['name']}\n"
-                f"Now: {cur} {price:.2f} (target {cur} {item['target']:.2f})\n"
-                f"{item['url']}"
-            )
+            open_or_update_alert(item, price)
         elif was_notified and not hit:
-            send(f"↩️ Back above target: {item['name']} is now {price:.2f}")
+            resolve_alert(item, price)
 
         state[iid] = {
             "price": price,
@@ -176,7 +269,7 @@ def main():
     STATE.write_text(json.dumps(state, indent=2))
 
     if failures:
-        send("⚠️ Scraper problems:\n" + "\n".join(failures))
+        report_failures(failures)
         print("\n".join(failures), file=sys.stderr)
         sys.exit(1)  # surface as a red run in Actions
 

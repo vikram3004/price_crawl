@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write            # needed to commit state.json back
+  issues: write              # needed to open/close price-alert issues
 
 concurrency:
   group: price-check
@@ -38,8 +39,8 @@ jobs:
         id: run
         continue-on-error: true
         env:
-          TG_TOKEN: ${{ secrets.TG_TOKEN }}
-          TG_CHAT: ${{ secrets.TG_CHAT }}
+          # GITHUB_REPOSITORY and GITHUB_API_URL are provided automatically.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python checker.py
 
       - name: Commit state & history
