@@ -1,1 +1,6 @@
-{}
+{
+  "nest-hub-2nd-gen": {
+    "last_error": "selector \"[jsname='price'], [aria-label*='$'], .price\" matched nothing and no JSON-LD offer found",
+    "checked_at": "2026-07-17T03:23:14.105558+00:00"
+  }
+}
