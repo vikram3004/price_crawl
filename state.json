@@ -2,7 +2,7 @@
   "nest-hub-2nd-gen": {
     "price": 99.99,
     "notified": false,
-    "checked_at": "2026-08-03T19:43:51.481877+00:00",
-    "last_error": null
+    "checked_at": "2026-08-04T19:42:41.416572+00:00",
+    "last_error": "selector \"[data-test='price']\" matched nothing and no JSON-LD offer found"
   }
 }
